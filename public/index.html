@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CRUD App</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        padding: 0;
+        background-color: #f4f4f4;
+      }
+      .container {
+        max-width: 800px;
+        margin: auto;
+        padding: 20px;
+        background: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      input,
+      button {
+        margin: 5px 0;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        width: 100%;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      table,
+      th,
+      td {
+        border: 1px solid #ddd;
+      }
+      th,
+      td {
+        padding: 10px;
+        text-align: left;
+      }
+      th {
+        background-color: #f4f4f4;
+      }
+      button {
+        cursor: pointer;
+      }
+      .update-btn,
+      .delete-btn {
+        padding: 5px 10px;
+        border: none;
+        color: #fff;
+        border-radius: 3px;
+      }
+      .update-btn {
+        background-color: #007bff;
+      }
+      .delete-btn {
+        background-color: #dc3545;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>CRUD App</h1>
+      <form id="userForm">
+        <input type="hidden" id="userId" />
+        <input type="text" id="first_name" placeholder="First Name" required />
+        <input type="text" id="last_name" placeholder="Last Name" required />
+        <input type="email" id="email" placeholder="Email" required />
+        <button type="submit">Add User</button>
+      </form>
+      <h2>Users</h2>
+      <table id="usersTable">
+        <thead>
+          <tr>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Email</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <script>
+      const userForm = document.getElementById("userForm");
+      const usersTable = document
+        .getElementById("usersTable")
+        .getElementsByTagName("tbody")[0];
+      const userIdInput = document.getElementById("userId");
+      let currentUserId = null;
+
+      userForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const firstName = document.getElementById("first_name").value;
+        const lastName = document.getElementById("last_name").value;
+        const email = document.getElementById("email").value;
+
+        if (currentUserId) {
+          // Update user
+          await fetch(`/users/${currentUserId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              first_name: firstName,
+              last_name: lastName,
+              email,
+            }),
+          });
+          currentUserId = null;
+        } else {
+          // Create user
+          await fetch("/users", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              first_name: firstName,
+              last_name: lastName,
+              email,
+            }),
+          });
+        }
+
+        userForm.reset();
+        loadUsers();
+      });
+
+      async function loadUsers() {
+        const response = await fetch("/users");
+        const users = await response.json();
+        usersTable.innerHTML = "";
+
+        users.forEach((user) => {
+          const row = usersTable.insertRow();
+          row.insertCell(0).textContent = user.first_name;
+          row.insertCell(1).textContent = user.last_name;
+          row.insertCell(2).textContent = user.email;
+
+          const actionsCell = row.insertCell(3);
+          const updateButton = document.createElement("button");
+          updateButton.textContent = "Update";
+          updateButton.className = "update-btn";
+          updateButton.onclick = () => editUser(user);
+
+          const deleteButton = document.createElement("button");
+          deleteButton.textContent = "Delete";
+          deleteButton.className = "delete-btn";
+          deleteButton.onclick = () => deleteUser(user._id);
+
+          actionsCell.appendChild(updateButton);
+          actionsCell.appendChild(deleteButton);
+        });
+      }
+
+      function editUser(user) {
+        document.getElementById("first_name").value = user.first_name;
+        document.getElementById("last_name").value = user.last_name;
+        document.getElementById("email").value = user.email;
+        userIdInput.value = user._id;
+        currentUserId = user._id;
+      }
+
+      async function deleteUser(id) {
+        await fetch(`/users/${id}`, { method: "DELETE" });
+        loadUsers();
+      }
+
+      // Initial load
+      loadUsers();
+    </script>
+  </body>
+</html>
